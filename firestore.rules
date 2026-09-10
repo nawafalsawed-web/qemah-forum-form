@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // منصة مؤثرين أهداف — الوصول محمي على مستوى تسجيل دخول الموقع (auth/me)
+    match /app/{doc} {
+      allow read, write: if true;
+    }
+
+    match /price_replies/{doc} {
+      allow read, write: if true;
+    }
+
+    // بوابة فضاء: العميل يقدر ينشئ طلب فقط — لا قراءة ولا تعديل ولا حذف
+    match /fada_leads/{leadId} {
+      allow create: if
+        request.resource.data.keys().hasOnly(
+          ['services','goal','goalNote','budget','timing','name','brand','phone','page','status','brief','ts']
+        )
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 100
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() >= 9
+        && request.resource.data.phone.size() <= 30
+        && request.resource.data.services is list
+        && request.resource.data.services.size() >= 1
+        && request.resource.data.services.size() <= 5
+        && request.resource.data.goalNote.size() <= 2000
+        && request.resource.data.status == 'new'
+        && request.resource.data.brief == null;
+      allow read, update, delete: if false;
+    }
+
+    // زوار جناح قمة للمزادات (منتدى الصناعة 2026): إنشاء فقط من الفورم العام
+    match /qemah_visitors/{id} {
+      allow create: if
+        request.resource.data.keys().hasOnly(['name','phone','title','org','category','interests','note','consent','usher','day','source','status','ts'])
+        && request.resource.data.name is string && request.resource.data.name.size() >= 1 && request.resource.data.name.size() <= 100
+        && request.resource.data.phone is string && request.resource.data.phone.size() >= 9 && request.resource.data.phone.size() <= 20
+        && request.resource.data.title is string && request.resource.data.title.size() <= 100
+        && request.resource.data.org is string && request.resource.data.org.size() <= 100
+        && request.resource.data.category in ['زائر عام','رجل أعمال أو شريك محتمل','صانع قرار','إعلامي','مسؤول أسطول أو منشأة']
+        && request.resource.data.interests is list && request.resource.data.interests.size() <= 8
+        && request.resource.data.note is string && request.resource.data.note.size() <= 1000
+        && request.resource.data.consent is bool
+        && request.resource.data.usher is string && request.resource.data.usher.size() <= 60
+        && request.resource.data.day is string && request.resource.data.day.size() <= 12
+        && request.resource.data.source == 'booth'
+        && request.resource.data.status == 'new'
+        && request.resource.data.ts == request.time;
+      allow read, update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
